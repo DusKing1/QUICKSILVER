@@ -5,6 +5,7 @@
 typedef enum {
   LOOPTIME_2K = 500,
   LOOPTIME_4K = 250,
+  LOOPTIME_6K = 166,
   LOOPTIME_8K = 125,
 } looptime_t;
 

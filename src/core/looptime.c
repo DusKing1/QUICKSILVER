@@ -40,6 +40,8 @@ static void looptime_auto_detect() {
 
     if (loop_avg < 130.f) {
       state.looptime_autodetect = LOOPTIME_8K;
+    } else if (loop_avg < 170.f) {
+      state.looptime_autodetect = LOOPTIME_6K;
     } else if (loop_avg < 255.f) {
       state.looptime_autodetect = LOOPTIME_4K;
     } else {
