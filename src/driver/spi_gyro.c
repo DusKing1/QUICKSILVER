@@ -49,7 +49,7 @@ static gyro_types_t gyro_spi_detect() {
       break;
     }
   case GYRO_TYPE_ASM330:
-    type = st_asm330_detect();
+    type = asm330_detect();
     if (type != GYRO_TYPE_INVALID) {
       break;
     }
@@ -103,7 +103,7 @@ uint8_t gyro_spi_init() {
     bmi270_configure();
     break;
   case GYRO_TYPE_ASM330:
-    st_asm330_configure();
+    asm330_configure();
     break;
 
   default:
@@ -164,7 +164,7 @@ gyro_data_t gyro_spi_read() {
 
   case GYRO_TYPE_ASM330: {
     uint8_t buf[14];
-    st_asm330_read_data(ASM330LHH_REG_OUT_TEMP_L, buf, 14);
+    asm330_read_data(ASM330LHH_REG_OUT_TEMP_L, buf, 14);
 
     data.temp = (float)((int16_t)((buf[1] << 8) | buf[0])) / 132.48f + 25.f;
 

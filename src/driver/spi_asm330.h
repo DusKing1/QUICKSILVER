@@ -20,7 +20,7 @@ typedef enum {
     ASM330LHH_VAL_CTRL1_XL_LPF2 = 0x01,         // accelerometer output from LPF2
     ASM330LHH_VAL_CTRL2_G_ODR6664 = 0x0A,       // gyro 6664hz output data rate
     ASM330LHH_VAL_CTRL2_G_2000DPS = 0x03,       // gyro 2000dps scale
-    // ASM330LHH_VAL_CTRL3_C_BDU = BIT(6),         // (bit 6) output registers are not updated until MSB and LSB have been read (prevents MSB from being updated while burst reading LSB/MSB)
+    ASM330LHH_VAL_CTRL3_C_BDU = BIT(6),         // (bit 6) output registers are not updated until MSB and LSB have been read (prevents MSB from being updated while burst reading LSB/MSB)
     ASM330LHH_VAL_CTRL3_C_H_LACTIVE = 0,        // (bit 5) interrupt pins active high
     ASM330LHH_VAL_CTRL3_C_PP_OD = 0,            // (bit 4) interrupt pins push/pull
     ASM330LHH_VAL_CTRL3_C_SIM = 0,              // (bit 3) SPI 4-wire interface mode
@@ -44,7 +44,7 @@ typedef enum {
 // ASM330LHH register configuration bit masks
 typedef enum {
     ASM330LHH_MASK_COUNTER_BDR1 = 0x80,    // 0b10000000
-    ASM330LHH_MASK_CTRL3_C = 0x3C,         // 0b00111100
+    ASM330LHH_MASK_CTRL3_C = 0x7C,         // 0b01111100
     ASM330LHH_MASK_CTRL3_C_RESET = BIT(0), // 0b00000001
     ASM330LHH_MASK_CTRL4_C = 0x0E,         // 0b00001110
     ASM330LHH_MASK_CTRL6_C = 0x17,         // 0b00010111
@@ -85,10 +85,10 @@ typedef enum {
     ASM330LHH_REG_OUTZ_H_A = 0x2D,   // acc Z axis MSB
 } asm330lhhRegister_e;
 
-uint8_t st_asm330_detect();
-void st_asm330_configure();
+uint8_t asm330_detect();
+void asm330_configure();
 
-void st_asm330_write(uint8_t reg, uint8_t data);
+void asm330_write(uint8_t reg, uint8_t data);
 
-uint8_t st_asm330_read(uint8_t reg);
-void st_asm330_read_data(uint8_t reg, uint8_t *data, uint32_t size);
+uint8_t asm330_read(uint8_t reg);
+void asm330_read_data(uint8_t reg, uint8_t *data, uint32_t size);
