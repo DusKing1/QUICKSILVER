@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 2, 3)
+#define PROFILE_VERSION MAKE_SEMVER(0, 2, 4)
 
 // Rates
 typedef enum {
@@ -186,12 +186,14 @@ typedef enum {
   DSHOT_TIME_150 = 150,
   DSHOT_TIME_300 = 300,
   DSHOT_TIME_600 = 600,
+  DSHOT_TIME_MAX = 600,
 } __attribute__((__packed__)) dshot_time_t;
 
 typedef struct {
   float digital_idle;
   float motor_limit;
   dshot_time_t dshot_time;
+  bool dshot_telemetry;
   uint8_t invert_yaw;
   uint8_t gyro_orientation;
   float torque_boost;
@@ -205,6 +207,7 @@ typedef struct {
   MEMBER(digital_idle, float)                      \
   MEMBER(motor_limit, float)                       \
   MEMBER(dshot_time, uint16_t)                     \
+  MEMBER(dshot_telemetry, bool)                    \
   MEMBER(invert_yaw, uint8_t)                      \
   MEMBER(gyro_orientation, uint8_t)                \
   MEMBER(torque_boost, float)                      \
@@ -229,16 +232,16 @@ typedef struct {
   float ibat_scale;
 } profile_voltage_t;
 
-#define VOLTAGE_MEMBERS                     \
-  START_STRUCT(profile_voltage_t)           \
-  MEMBER(lipo_cell_count, uint8_t)          \
-  MEMBER(pid_voltage_compensation, uint8_t) \
-  MEMBER(vbattlow, float)                   \
-  MEMBER(actual_battery_voltage, float)     \
-  MEMBER(reported_telemetry_voltage, float) \
+#define VOLTAGE_MEMBERS                              \
+  START_STRUCT(profile_voltage_t)                    \
+  MEMBER(lipo_cell_count, uint8_t)                   \
+  MEMBER(pid_voltage_compensation, uint8_t)          \
+  MEMBER(vbattlow, float)                            \
+  MEMBER(actual_battery_voltage, float)              \
+  MEMBER(reported_telemetry_voltage, float)          \
   MEMBER(use_filtered_voltage_for_warnings, uint8_t) \
-  MEMBER(vbat_scale, float)                 \
-  MEMBER(ibat_scale, float)                 \
+  MEMBER(vbat_scale, float)                          \
+  MEMBER(ibat_scale, float)                          \
   END_STRUCT()
 
 typedef struct {
@@ -334,12 +337,14 @@ typedef struct {
 
 typedef struct {
   uint32_t field_flags;
+  uint32_t debug_flags;
   uint32_t sample_rate_hz;
 } profile_blackbox_t;
 
 #define BLACKBOX_MEMBERS           \
   START_STRUCT(profile_blackbox_t) \
   MEMBER(field_flags, uint32_t)    \
+  MEMBER(debug_flags, uint32_t)    \
   MEMBER(sample_rate_hz, uint32_t) \
   END_STRUCT()
 

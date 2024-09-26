@@ -13,6 +13,8 @@
 #include "io/led.h"
 #include "util/cbor_helper.h"
 
+#ifdef USE_MOTOR_DSHOT
+
 #define RX_LED_OFF led_off(1)
 #define RX_LED_ON led_on(1)
 #define TX_LED_OFF led_off(2)
@@ -222,7 +224,7 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t 
     device.selected_esc = input[0];
 
     bool reboot_esc = false;
-    if ((addr & 0xFF) == 1) {
+    if (addr) {
       reboot_esc = true;
     }
 
@@ -624,3 +626,5 @@ void serial_4way_process() {
     }
   };
 }
+
+#endif

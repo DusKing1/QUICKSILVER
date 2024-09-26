@@ -4,6 +4,9 @@
 
 #include "core/failloop.h"
 #include "driver/interrupt.h"
+#include "driver/motor_dshot.h"
+
+#ifdef USE_SPI
 
 FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
     [RANGE_INIT(0, SPI_PORT_MAX)] = {.is_init = false, .dma_done = true, .txn_head = 0, .txn_tail = 0},
@@ -11,6 +14,7 @@ FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
 DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][DMA_ALIGN(512)];
 
+extern void spi_device_init(spi_ports_t port);
 extern void spi_reconfigure(spi_bus_device_t *bus);
 extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
 
@@ -34,11 +38,10 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
   }
 
 #if defined(STM32F4) && defined(USE_MOTOR_DSHOT)
-  extern volatile uint32_t dshot_dma_phase;
   if (dma &&
       target.brushless &&
       bus->port == SPI_PORT1 &&
-      dshot_dma_phase != 0) {
+      dshot_phase != 0) {
     return false;
   }
 #endif
@@ -188,3 +191,51 @@ void spi_txn_finish(spi_ports_t port) {
   spi_dev[port].dma_done = true;
   spi_txn_continue_port(port);
 }
+
+static void spi_init_pins(spi_ports_t port) {
+  const target_spi_port_t *dev = &target.spi_ports[port];
+
+  gpio_config_t gpio_init;
+
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_pin_init_tag(dev->sck, gpio_init, SPI_TAG(port, RES_SPI_SCK));
+
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init_tag(dev->miso, gpio_init, SPI_TAG(port, RES_SPI_MISO));
+
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init_tag(dev->mosi, gpio_init, SPI_TAG(port, RES_SPI_MOSI));
+}
+
+void spi_bus_device_init(const spi_bus_device_t *bus) {
+  if (!target_spi_port_valid(&target.spi_ports[bus->port])) {
+    return;
+  }
+
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_pin_init(bus->nss, gpio_init);
+  gpio_pin_set(bus->nss);
+
+  if (spi_dev[bus->port].is_init) {
+    return;
+  }
+
+  spi_init_pins(bus->port);
+  spi_device_init(bus->port);
+  spi_dev[bus->port].is_init = true;
+}
+
+#endif

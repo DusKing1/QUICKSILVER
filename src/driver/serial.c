@@ -3,6 +3,8 @@
 #include "driver/interrupt.h"
 #include "driver/serial_soft.h"
 
+#ifdef USE_SERIAL
+
 serial_port_t *serial_ports[SERIAL_PORT_MAX];
 
 extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
@@ -38,7 +40,7 @@ static bool serial_hard_pin_init(serial_port_t *serial, serial_port_config_t con
 
   bool swap = false;
 
-  gpio_config_t gpio_init;
+  gpio_config_t gpio_init = gpio_config_default();
   gpio_init.mode = GPIO_ALTERNATE;
   gpio_init.drive = GPIO_DRIVE_HIGH;
   if (config.half_duplex) {
@@ -163,3 +165,5 @@ void soft_serial_rx_isr(serial_ports_t port) {
   const uint8_t data = soft_serial_read_byte(port);
   ring_buffer_write(serial->rx_buffer, data);
 }
+
+#endif

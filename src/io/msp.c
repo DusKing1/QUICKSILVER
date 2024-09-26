@@ -101,6 +101,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
   case MSP_UID: {
+#ifdef SIMULATOR
     uint8_t data[12] = {
         0x0,
         0x0,
@@ -118,6 +119,9 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
         0xf,
     };
     msp_send_reply(msp, magic, cmd, data, 12);
+#else
+    msp_send_reply(msp, magic, cmd, (uint8_t *)UID_BASE, 12);
+#endif
     break;
   }
   case MSP_ANALOG: {
@@ -249,6 +253,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     switch (mode) {
+#ifdef USE_SERIAL
     case MSP_PASSTHROUGH_SERIAL_ID: {
       uint8_t data[1] = {1};
       msp_send_reply(msp, magic, cmd, data, 1);
@@ -263,7 +268,8 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       }
       break;
     }
-
+#endif
+#ifdef USE_MOTOR_DSHOT
     default:
     case MSP_PASSTHROUGH_ESC_4WAY: {
       uint8_t data[1] = {MOTOR_PIN_MAX};
@@ -275,6 +281,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       serial_4way_process();
       break;
     }
+#endif
     }
 
     break;
@@ -289,6 +296,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
 
+#ifdef USE_SERIAL
   case MSP2_COMMON_SERIAL_CONFIG: {
     const uint8_t uart_count = SERIAL_PORT_MAX - 1;
     uint8_t data[1 + uart_count * 5];
@@ -309,8 +317,8 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
           function = MSP_SERIAL_FUNCTION_SA;
         }
       }
-      if (i == serial_hdzero.config.port) {
-        function = MSP_SERIAL_FUNCTION_HDZERO;
+      if (i == serial_displayport.config.port) {
+        function = MSP_SERIAL_FUNCTION_DISPLAYPORT;
       }
 
       data[1 + i * 5 + 1] = (function >> 0) & 0xFF;
@@ -322,7 +330,8 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     msp_send_reply(msp, magic, cmd, data, 1 + uart_count * 5);
     break;
   }
-
+#endif
+#ifdef USE_VTX
   case MSP_VTX_CONFIG: {
     msp_vtx_send_config_reply(msp, magic);
     break;
@@ -457,19 +466,19 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
   case MSP_VTXTABLE_POWERLEVEL: {
     const uint8_t level = payload[0];
-    if (level <= 0 || level > VTX_POWER_LEVEL_MAX) {
+    if (level <= 0 || level > vtx_actual.power_table.levels) {
       msp_send_error(msp, magic, cmd);
       break;
     }
 
     const uint16_t power = vtx_actual.power_table.values[level - 1];
 
-    uint8_t buf[7];
+    uint8_t buf[4 + VTX_POWER_LABEL_LEN];
     buf[0] = level;
     buf[1] = power & 0xFF;
     buf[2] = power >> 8;
-    buf[3] = 3;
-    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], 3);
+    buf[3] = VTX_POWER_LABEL_LEN;
+    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], VTX_POWER_LABEL_LEN);
 
     msp_send_reply(msp, magic, cmd, buf, 7);
     break;
@@ -486,17 +495,20 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     vtx_actual.power_table.values[level - 1] = payload[2] << 8 | payload[1];
 
     const uint8_t label_len = payload[3];
-    for (uint8_t i = 0; i < 3; i++) {
+    for (uint8_t i = 0; i < VTX_POWER_LABEL_LEN; i++) {
       vtx_actual.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
-
+#endif
   case MSP_EEPROM_WRITE: {
+#ifdef USE_VTX
     if (msp->device == MSP_DEVICE_VTX) {
       msp_vtx_detected = 1;
-    } else if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
+    } else
+#endif
+        if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
       flash_save();
       task_reset_runtime();
     }
@@ -506,14 +518,19 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
   case MSP_REBOOT: {
     if (flags.arm_state) {
+      msp_send_error(msp, magic, cmd);
       break;
     }
+
+    msp_send_reply(msp, magic, cmd, payload, 1);
+    time_delay_ms(100);
 
     switch (payload[0]) {
     case MSP_REBOOT_FIRMWARE:
       system_reset();
       break;
 
+    case MSP_REBOOT_BOOTLOADER_FLASH:
     case MSP_REBOOT_BOOTLOADER_ROM:
       system_reset_to_bootloader();
       break;

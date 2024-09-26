@@ -11,6 +11,8 @@
 #include "flight/control.h"
 #include "util/util.h"
 
+#ifdef USE_RX_UNIFIED
+
 typedef enum {
   DSM_PROTO_INVALID = 0,
   DSMX_11_2048 = 0xb2,
@@ -160,7 +162,7 @@ void rx_spektrum_bind() {
   if (bind_storage.bind_saved == 0) {
     const gpio_pins_t spectrum_bind_pin = target.serial_ports[profile.serial.rx].rx;
 
-    gpio_config_t gpio_init;
+    gpio_config_t gpio_init = gpio_config_default();
     gpio_init.mode = GPIO_OUTPUT;
     gpio_init.output = GPIO_PUSHPULL;
     gpio_init.pull = GPIO_NO_PULL;
@@ -195,3 +197,8 @@ float rx_serial_dsm_expected_fps() {
   }
   return 91;
 }
+
+#else
+void rx_spektrum_bind() {
+}
+#endif

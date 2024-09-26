@@ -7,7 +7,8 @@
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
-#include "driver/osd.h"
+#include "driver/osd/osd.h"
+#include "driver/reset.h"
 #include "flight/control.h"
 #include "io/blackbox_device.h"
 #include "io/led.h"
@@ -19,6 +20,7 @@
 #define ICON_CELSIUS 0xe
 #define ICON_THROTTLE 0x4
 #define ICON_VOLT 0x6
+#define ICON_MAH 0x7
 #define ICON_AMP 0x9a
 #define ICON_DOWN 0x76
 #define ICON_GAUGE 0x70
@@ -28,9 +30,6 @@
 
 #define HOLD 0
 #define TEMP 1
-
-#define HD_ROWS 18
-#define HD_COLS 50
 
 extern profile_t profile;
 
@@ -71,6 +70,7 @@ static const char *osd_element_labels[] = {
     "VTX",
     "CURRENT DRAW",
     "CROSSHAIR",
+    "CURRENT DRAWN",
 };
 
 static const char *aux_channel_labels[] = {
@@ -245,10 +245,12 @@ void osd_exit() {
 void osd_save_exit() {
   osd_exit();
 
+#ifdef USE_VTX
   // check if vtx settings need to be updated
   if (vtx_buffer_populated) {
     vtx_set(&vtx_settings_copy);
   }
+#endif
 
   led_flash();
 
@@ -258,7 +260,7 @@ void osd_save_exit() {
   task_reset_runtime();
 
   if (osd_state.reboot_fc_requested)
-    NVIC_SystemReset();
+    system_reset();
 }
 
 static void print_osd_flightmode(osd_element_t *el) {
@@ -293,7 +295,7 @@ static void print_osd_rssi(osd_element_t *el) {
   if (flags.failsafe)
     state.rx_rssi = 0.0f;
 
-  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+  lpf(&rx_rssi_filt, state.rx_rssi, lpfcalc(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
 
   osd_start(osd_attr(el), el->pos_x, el->pos_y);
   osd_write_uint(rx_rssi_filt - 0.5f, 4);
@@ -331,6 +333,7 @@ static void print_osd_armtime(osd_element_t *el) {
 
 // print the current vtx settings as Band:Channel:Power
 static void print_osd_vtx(osd_element_t *el) {
+#ifdef USE_VTX
   osd_start(osd_attr(el), el->pos_x, el->pos_y);
 
   switch (vtx_settings.band) {
@@ -369,6 +372,7 @@ static void print_osd_vtx(osd_element_t *el) {
     else
       osd_write_char(vtx_settings.power_level + 49);
   }
+#endif
 }
 
 void osd_init() {
@@ -486,6 +490,15 @@ static void osd_display_regular() {
     osd_start(osd_attr(el), el->pos_x, el->pos_y);
     osd_write_float(state.ibat_filtered / 1000.0f, 4, 2);
     osd_write_char(ICON_AMP);
+
+    osd_state.element++;
+    break;
+  }
+
+  case OSD_CURRENT_DRAWN: {
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_float(state.ibat_drawn, 4, 2);
+    osd_write_char(ICON_MAH);
 
     osd_state.element++;
     break;
@@ -909,13 +922,16 @@ void osd_display() {
   }
 
   case OSD_SCREEN_VTX:
+#ifdef USE_VTX
     if (vtx_settings.detected) {
-      static char power_level_labels_terminated[VTX_POWER_LEVEL_MAX][4];
+      static const char *power_level_labels[VTX_POWER_LEVEL_MAX];
+      static char power_level_labels_terminated[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN + 1];
       if (!vtx_buffer_populated) {
         vtx_settings_copy = vtx_settings;
-        for (uint8_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
-          memcpy(power_level_labels_terminated[i], vtx_settings.power_table.labels[i], 3);
-          power_level_labels_terminated[i][3] = 0;
+        for (uint8_t i = 0; i < vtx_settings.power_table.levels; i++) {
+          memcpy(power_level_labels_terminated[i], vtx_settings.power_table.labels[i], VTX_POWER_LABEL_LEN);
+          power_level_labels_terminated[i][VTX_POWER_LABEL_LEN] = 0;
+          power_level_labels[i] = power_level_labels_terminated[i];
         }
         vtx_buffer_populated = 1;
       }
@@ -928,16 +944,7 @@ void osd_display() {
 
       const char *channel_labels[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
       osd_menu_select_enum_adjust(4, 5, "CHANNEL", 20, &vtx_settings_copy.channel, channel_labels, VTX_CHANNEL_1, VTX_CHANNEL_8);
-
-      // this ugly AF
-      const char *power_level_labels[] = {
-          power_level_labels_terminated[0],
-          power_level_labels_terminated[1],
-          power_level_labels_terminated[2],
-          power_level_labels_terminated[3],
-          power_level_labels_terminated[4],
-      };
-      osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_settings_copy.power_level, power_level_labels, VTX_POWER_LEVEL_1, VTX_POWER_LEVEL_MAX - 1);
+      osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_settings_copy.power_level, power_level_labels, VTX_POWER_LEVEL_1, vtx_settings.power_table.levels - 1);
 
       const char *pit_mode_labels[] = {"OFF", "ON ", "N/A"};
       osd_menu_select(4, 7, "PITMODE");
@@ -947,7 +954,9 @@ void osd_display() {
 
       osd_menu_select_save_and_exit(4);
       osd_menu_finish();
-    } else {
+    } else
+#endif
+    {
       osd_menu_start();
       osd_menu_header("VTX CONTROLS");
 
@@ -1069,10 +1078,10 @@ void osd_display() {
 
       osd_menu_select(3, OSD_AUTO, osd_element_labels[i]);
       if (osd_menu_select_int(20, OSD_AUTO, el->pos_x, 3)) {
-        el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, osd_system == OSD_SYS_HD ? HD_COLS : 30);
+        el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, osd_system == OSD_SYS_HD ? HD_COLS : SD_COLS);
       }
       if (osd_menu_select_int(26, OSD_AUTO, el->pos_y, 3)) {
-        el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, osd_system == OSD_SYS_HD ? HD_ROWS : 15);
+        el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, osd_system == OSD_SYS_HD ? HD_ROWS : SD_ROWS);
       }
     }
     osd_menu_scroll_finish(3);

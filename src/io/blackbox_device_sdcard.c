@@ -1,15 +1,15 @@
 #include "blackbox_device_sdcard.h"
 
+#ifdef USE_SDCARD
+
 #include <string.h>
 
 #include "core/project.h"
-#include "driver/spi_sdcard.h"
+#include "driver/blackbox/sdcard.h"
 
 #define FLUSH_INTERVAL 8
 #define FILES_SECTOR_OFFSET 1
 #define PAGE_SIZE SDCARD_PAGE_SIZE
-
-#ifdef USE_SDCARD
 
 typedef enum {
   STATE_DETECT,

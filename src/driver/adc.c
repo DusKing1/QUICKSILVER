@@ -5,13 +5,15 @@
 #include "core/profile.h"
 #include "core/project.h"
 
+#ifdef USE_ADC
+
 #define VBAT_SCALE (profile.voltage.vbat_scale * (1.f / 10000.f))
 
 uint16_t adc_array[ADC_CHAN_MAX];
 adc_channel_t adc_pins[ADC_CHAN_MAX];
 
 extern uint16_t adc_read_raw(adc_chan_t index);
-extern float adc_convert_to_temp(float val);
+extern float adc_convert_to_temp(uint16_t val);
 
 static float adc_convert_to_mv(float value) {
   const float vref = (float)(VREFINT_CAL * VREFINT_CAL_VREF) / (float)adc_read_raw(ADC_CHAN_VREF);
@@ -42,3 +44,14 @@ float adc_read(adc_chan_t chan) {
     return adc_read_raw(chan);
   }
 }
+#else
+void adc_init() {}
+float adc_read(adc_chan_t chan) {
+  switch (chan) {
+  case ADC_CHAN_VBAT:
+    return 4.20f;
+  default:
+    return 0;
+  }
+}
+#endif

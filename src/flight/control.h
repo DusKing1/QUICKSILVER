@@ -8,8 +8,6 @@
 #include "rx/rx.h"
 #include "util/vector.h"
 
-#define ANGLE_PID_SIZE 3
-
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
 
@@ -68,6 +66,7 @@ typedef struct {
 
   float ibat;
   float ibat_filtered;
+  float ibat_drawn;
 
   vec4_t rx;          // holds the raw or calibrated main four channels, roll, pitch, yaw, throttle
   vec4_t rx_filtered; // same as above, but with constraints (just in case), smoothing and deadband applied
@@ -105,7 +104,10 @@ typedef struct {
 
   vec4_t motor_mix;
 
-  float angleerror[ANGLE_PID_SIZE];
+  vec3_t angle_error;
+  vec3_t stick_vector;
+
+  uint32_t dshot_rpm[4];
 } control_state_t;
 
 #define STATE_MEMBERS                         \
@@ -129,6 +131,7 @@ typedef struct {
   MEMBER(vbat_compensated_cell_avg, float)    \
   MEMBER(ibat, float)                         \
   MEMBER(ibat_filtered, float)                \
+  MEMBER(ibat_drawn, float)                   \
   MEMBER(rx, vec4_t)                          \
   MEMBER(rx_filtered, vec4_t)                 \
   MEMBER(rx_override, vec4_t)                 \
@@ -153,7 +156,9 @@ typedef struct {
   MEMBER(pid_d_term, vec3_t)                  \
   MEMBER(pidoutput, vec3_t)                   \
   MEMBER(motor_mix, vec4_t)                   \
-  ARRAY_MEMBER(angleerror, ANGLE_PID_SIZE, float)
+  MEMBER(angle_error, vec3_t)                 \
+  MEMBER(stick_vector, vec3_t)                \
+  ARRAY_MEMBER(dshot_rpm, 4, uint32_t)
 
 typedef struct {
   uint8_t active;

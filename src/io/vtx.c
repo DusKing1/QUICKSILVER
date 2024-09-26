@@ -8,15 +8,17 @@
 #include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/serial.h"
-#include "driver/serial_vtx_msp.h"
-#include "driver/serial_vtx_sa.h"
-#include "driver/serial_vtx_tramp.h"
 #include "driver/time.h"
+#include "driver/vtx/msp.h"
+#include "driver/vtx/sa.h"
+#include "driver/vtx/tramp.h"
 #include "flight/control.h"
 #include "rx/rx.h"
 #include "rx/unified_serial.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
+
+#ifdef USE_VTX
 
 vtx_settings_t vtx_settings = {
     .power_table = {
@@ -145,7 +147,7 @@ static bool vtx_detect_protocol() {
     return true;
   }
 
-  if (serial_hdzero.config.port != SERIAL_PORT_INVALID) {
+  if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
     vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
   }
 
@@ -324,7 +326,7 @@ void vtx_update() {
   }
 
   if (profile.serial.smart_audio == SERIAL_PORT_INVALID &&
-      serial_hdzero.config.port == SERIAL_PORT_INVALID) {
+      serial_displayport.config.port == SERIAL_PORT_INVALID) {
     // no serial assigned to vtx or still in use by rx
     return;
   }
@@ -398,7 +400,7 @@ void vtx_set(vtx_settings_t *vtx) {
   if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = vtx->pit_mode;
 
-  vtx_settings.power_level = vtx->power_level < VTX_POWER_LEVEL_MAX ? vtx->power_level : (VTX_POWER_LEVEL_MAX - 1);
+  vtx_settings.power_level = vtx->power_level < vtx_settings.power_table.levels ? vtx->power_level : (vtx_settings.power_table.levels - 1);
 
   vtx_settings.band = vtx->band < VTX_BAND_MAX ? vtx->band : 0;
   vtx_settings.channel = vtx->channel < VTX_CHANNEL_MAX ? vtx->channel : 0;
@@ -437,3 +439,8 @@ CBOR_END_STRUCT_DECODER()
 #undef MEMBER
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
+
+#else
+void vtx_init() {}
+void vtx_update() {}
+#endif

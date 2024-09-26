@@ -4,6 +4,8 @@
 #include "driver/serial_4way.h"
 #include "driver/time.h"
 
+#ifdef USE_MOTOR_DSHOT
+
 #define BOOT_MSG_LEN 4
 #define DevSignHi (BOOT_MSG_LEN)
 #define DevSignLo (BOOT_MSG_LEN + 1)
@@ -53,7 +55,7 @@ static void esc_set_low(gpio_pins_t pin) {
 }
 
 static void esc_set_input(gpio_pins_t pin) {
-  gpio_config_t gpio_init = {0};
+  gpio_config_t gpio_init = gpio_config_default();
   gpio_init.mode = GPIO_INPUT;
   gpio_init.output = GPIO_OPENDRAIN;
   gpio_init.pull = GPIO_UP_PULL;
@@ -62,7 +64,7 @@ static void esc_set_input(gpio_pins_t pin) {
 }
 
 static void esc_set_output(gpio_pins_t pin) {
-  gpio_config_t gpio_init = {0};
+  gpio_config_t gpio_init = gpio_config_default();
   gpio_init.mode = GPIO_OUTPUT;
   gpio_init.output = GPIO_PUSHPULL;
   gpio_init.pull = GPIO_NO_PULL;
@@ -285,8 +287,12 @@ uint8_t avr_bl_send_keepalive(gpio_pins_t pin) {
 }
 
 void avr_bl_send_restart(gpio_pins_t pin, uint8_t *data) {
-  uint8_t buf[] = {RestartBootloader, 0};
-  avr_bl_write(pin, buf, 2); // sends simply 4 x 0x00 (CRC =00)
+  esc_set_output(pin);
+  serial_write(pin, RestartBootloader);
+  serial_write(pin, 0);
+  serial_write(pin, 0);
+  serial_write(pin, 0);
+  esc_set_input(pin);
   data[0] = 1;
 }
 
@@ -295,7 +301,7 @@ void avr_bl_reboot(gpio_pins_t pin) {
 
   esc_set_low(pin);
   time_delay_ms(300);
-  esc_is_high(pin);
+  esc_set_high(pin);
 
   esc_set_input(pin);
 }
@@ -371,3 +377,5 @@ uint8_t avr_bl_verify_flash(gpio_pins_t pin, uint16_t addr, const uint8_t *data,
 
   return avr_bl_get_ack(pin, 40 / START_BIT_TIMEOUT_MS);
 }
+
+#endif

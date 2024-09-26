@@ -1,17 +1,3 @@
-
-
-// Universal pids are already loaded for 5" brushless by default.  Adjust pids in pid.c file for your build.
-
-//**********************************************************************************************************************
-//***********************************************HARDWARE SELECTION*****************************************************
-
-//**********************************************************************************************************************
-//***********************************************NEW STUFF TO PLAY WITH*****************************************************
-
-#define THROTTLE_D_ATTENUATION
-#define TDA_BREAKPOINT 0.35f
-#define TDA_PERCENT 0.80f
-
 //**********************************************************************************************************************
 //***********************************************RATES & EXPO SETTINGS**************************************************
 
@@ -74,6 +60,11 @@
 // ************* expo for throttle with the zero crossing at THROTTLE_MID
 #define THROTTLE_EXPO 0.0f
 
+// ************* throttle d-term attenuation
+#define THROTTLE_D_ATTENUATION
+#define TDA_BREAKPOINT 0.35f
+#define TDA_PERCENT 0.80f
+
 //**********************************************************************************************************************
 //***********************************************RECEIVER SETTINGS******************************************************
 
@@ -121,6 +112,10 @@
 // *************RRD/LLD stick gesture aux start up state.  Gesture aux is AUX_CHANNEL_GESTURE
 // #define GESTURE_AUX_START_ON
 
+// *************failsafe time in uS
+#define FAILSAFE_TIME_US 1000000
+#define FAILSAFE_LOCK_TIME_MS 5000
+
 //**********************************************************************************************************************
 //***********************************************VOLTAGE SETTINGS*******************************************************
 
@@ -130,11 +125,6 @@
 // ************* Raises pids automatically as battery voltage drops in flight.  **CRITICAL** Ensure voltage is calibrated before use.
 #define PID_VOLTAGE_COMPENSATION
 #define LEVELMODE_PID_ATTENUATION 0.90f // used to prevent oscillations in angle modes with pid_voltage_compensation enabled due to high pids
-
-// *************compensation for battery voltage vs throttle drop
-#define VDROP_FACTOR 0.7
-// *************calculate above factor automatically
-#define AUTO_VDROP_FACTOR
 
 // *************voltage/cell to start warning led blinking
 #define VBATTLOW 3.6
@@ -250,19 +240,18 @@
 // x (micro)seconds after loss of tx or low bat before buzzer starts
 #define BUZZER_DELAY 30e6
 
+// The airbot made ab7456 osd chip will not support blink commands
+// #define AIRBOT_OSD_PATCH
+
+// some vtxes eg. from akk need an extra dummy byte
+// #define USE_AKK_SA_WORKAROUND
+
 // #############################################################################################################################
 // #############################################################################################################################
 //  debug / other things
 //  this should not be usually changed or still need work
 // #############################################################################################################################
 // #############################################################################################################################
-
-// The airbot made ab7456 osd chip will not support blink commands
-// #define AIRBOT_OSD_PATCH
-
-// failsafe time in uS
-#define FAILSAFE_TIME_US 1000000
-#define FAILSAFE_LOCK_TIME_MS 5000
 
 // debug things ( debug struct and other)
 // #define DEBUG
@@ -277,3 +266,5 @@
 
 // change mixer to a plus configuration
 // #define MOTOR_PLUS_CONFIGURATION
+
+// #define BLACKBOX_DEBUG_FLAGS BBOX_DEBUG_DYN_NOTCH

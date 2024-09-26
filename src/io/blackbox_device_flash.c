@@ -1,8 +1,10 @@
 #include "blackbox_device_flash.h"
 
 #include "core/project.h"
-#include "driver/spi_m25p16.h"
+#include "driver/blackbox/m25p16.h"
 #include "util/util.h"
+
+#ifdef USE_DATA_FLASH
 
 #define FILES_SECTOR_OFFSET blackbox_bounds.sector_size
 #define PAGE_SIZE M25P16_PAGE_SIZE
@@ -25,8 +27,6 @@ typedef enum {
   PHASE_WRITE,
   PHASE_FLUSH,
 } blackbox_device_phase_t;
-
-#ifdef USE_DATA_FLASH
 
 static blackbox_device_state_t state = STATE_DETECT;
 static blackbox_device_phase_t phase = PHASE_IDLE;

@@ -3,7 +3,9 @@
 #include <string.h>
 
 #include "driver/serial.h"
-#include "driver/serial_vtx_tramp.h"
+#include "driver/vtx/tramp.h"
+
+#ifdef USE_VTX
 
 #define TRAMP_DETECT_TRIES 5
 
@@ -19,14 +21,20 @@ static const uint16_t tramp_power_level_values[VTX_POWER_LEVEL_MAX] = {
     200,
     300,
     400,
+    0,
+    0,
+    0,
 };
 
-static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][3] = {
-    "25 ",
-    "100",
-    "200",
-    "300",
-    "400",
+static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN] = {
+    "25   ",
+    "100  ",
+    "200  ",
+    "300  ",
+    "400  ",
+    "     ",
+    "     ",
+    "     ",
 };
 
 vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
@@ -111,3 +119,5 @@ void tramp_set_pit_mode(vtx_pit_mode_t pit_mode) {
   serial_tramp_send_payload('I', pit_mode == VTX_PIT_MODE_ON ? 0 : 1);
   tramp_settings.frequency = 0;
 }
+
+#endif

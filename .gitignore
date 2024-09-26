@@ -74,3 +74,6 @@ go.sum
 
 /.pio
 __pycache__
+/targets
+flash.bin
+blackbox.bin
