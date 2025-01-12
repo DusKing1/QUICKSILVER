@@ -79,6 +79,18 @@ void osd_clear() {
     ;
 }
 
+void osd_mark_row_dirty() {
+  static uint8_t row = 0;
+
+  const uint16_t offset = row * cols;
+  for (uint32_t i = 0; i < cols; i++) {
+    display[offset + i].dirty = display[offset + i].val != ' ';
+  }
+  display_dirty = display_row_dirty[row] = true;
+
+  row = (row + 1) % rows;
+}
+
 uint8_t osd_clear_async() {
   static uint8_t state = 0;
 

@@ -531,6 +531,8 @@ static void osd_display_regular() {
       // display warning if we can not detect a camera
       osd_start(OSD_ATTR_BLINK, 7, 7);
       osd_write_str("NO CAMERA SIGNAL");
+    } else if (osd_system == OSD_SYS_HD) {
+      osd_mark_row_dirty();
     }
     osd_state.element = 0;
     break;
